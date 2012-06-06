@@ -1,0 +1,370 @@
+<html>
+<head>
+	<link rel="stylesheet" href="tests/qunit.css" type="text/css"/>
+	<script src="jquery-1.7.2.js"></script>
+	<script src="tests/qunit.js"></script>
+
+	<script src="minesweeper.js"></script>
+</head>
+
+<script type="text/javascript">
+
+$(function() {
+	function setup() {
+		this.game = new Minesweeper();
+	}
+
+	function teardown() {
+		this.game = null;
+	}
+
+	var defaults = {
+		setup: setup,
+		teardown: teardown
+	};
+
+	///////////////////////////
+	module('Game setup', defaults);
+
+	test('Game board initialised', function () {
+		expect(3);
+
+		this.game.bind('game:start', function () {
+			ok(true, 'game:start event called');
+		});
+
+		this.game.init(2, 2, 1);
+
+		equal(this.game.board.length, 2);
+		equal(this.game.state, 'started');
+	});
+
+	test('Can\'t get invalid cell', function () {
+		this.game.init(1, 1, 0);
+
+		equal(this.game.cell(1, 1), false);
+	})
+
+	test('Cell created invisible', function () {
+		this.game.init(1, 1, 0);
+
+		equal(this.game.cell(0, 0).visible, false);
+	})
+
+	test('No mines created', function () {
+		// 1x1 game, no mines
+		this.game.init(1, 1, 0);
+
+		equal(this.game.cell(0, 0).mine, false)
+	});
+
+	test('Mines created', function () {
+		// 1x1 game, 1 mine = the only square should be a mine
+		this.game.init(1, 1, 1);
+
+		equal(this.game.cell(0, 0).mine, true)
+	});
+
+	///////////////////////////
+	module('Showing cells', defaults);
+
+	test('Showing should do nothing if the game has not started', function () {
+		expect(0);
+
+		this.game.bind('game:cell:show', function (coords) {
+			ok(false, 'callback should not have been called');
+		});
+
+		this.game.show(0, 0);
+	});
+
+	test('Showing on non-mine cell', function () {
+		expect(4);
+
+		this.game.bind('game:cell:show', function (coords) {
+			equal(coords['x'], 0);
+			equal(coords['y'], 0);
+		});
+
+		this.game.init(1, 1, 0);
+
+		this.game.show(0, 0);
+
+		equal(this.game.cell(0, 0).visible, true);
+		equal(this.game.shown.length, 1);
+	});
+
+	test('Showing on a visible cell does nothing', function () {
+		expect(0);
+
+		this.game.init(1, 1, 0);
+
+		this.game.show(0, 0);
+
+		this.game.bind('game:cell:show', function (coords) {
+			ok(false, 'callback shouldnt be called on a visible cell');
+		});
+
+		this.game.show(0, 0);
+	});
+
+	///////////////////////////
+	module('Flagging cells', defaults);
+
+	test('Flagging should do nothing if the game has not started', function () {
+		expect(0);
+
+		this.game.bind('game:cell:flag', function (event) {
+			ok(false, 'callback should not have been called');
+		});
+
+		this.game.flag(0, 0);
+	});
+
+	test('Flag a cell', function () {
+		expect(5);
+
+		this.game.bind('game:cell:flag', function (event) {
+			equal(event['x'], 0);
+			equal(event['y'], 0);
+			equal(event['state'], true);
+		});
+
+		this.game.init(1, 1, 0);
+
+		this.game.flag(0, 0);
+
+		equal(this.game.cell(0, 0).flagged, true);
+		ok(this.game.flagged['0|0']);
+	});
+
+	test('Flag then unflag a cell', function () {
+		expect(3);
+
+		this.game.init(1, 1, 0);
+
+		this.game.flag(0, 0);
+
+		this.game.bind('game:cell:flag', function (event) {
+			equal(event['state'], false);
+		});
+
+		this.game.flag(0, 0);
+
+		equal(this.game.cell(0, 0).flagged, false);
+		equal(this.game.flagged['0|0'], undefined);
+	});
+
+	test('Force flagging does not fire event', function () {
+		expect(0);
+
+		this.game.init(1, 1, 0);
+
+		this.game.flag(0, 0);
+
+		this.game.bind('game:cell:flag', function (event) {
+			ok(false, 'event should not have fired');
+		});
+
+		this.game.flag(0, 0, true);
+	});
+
+	///////////////////////////
+	module('Showing flagging mines', defaults);
+
+	test('Showing a cell should flag a mine adjacent to it', function () {
+		this.game.init(3, 3, 0);
+
+		this.game.mine(0, 0);
+		this.game.mine(2, 2);
+
+		this.game.show(1, 1);
+
+		equal(this.game.cell(0, 0).flagged, true);
+		equal(this.game.cell(2, 2).flagged, true);
+	});
+
+	test('Flagging mines flags mines', function () {
+		this.game.init(1, 1, 1);
+
+		this.game.flag_mines();
+
+		equal(this.game.cell(0, 0).flagged, true);
+	});
+
+	///////////////////////////
+	module('Game ending', defaults);
+
+	test('Showing a mine cell loses the game', function () {
+		expect(2);
+
+		this.game.init(1, 1, 1);
+
+		this.game.bind('game:end', function (event) {
+			equal(event['outcome'], 'lose');
+		});
+
+		this.game.show(0, 0);
+
+		equal(this.game.state, 'ended');
+	});
+
+	test('Flagging all mine cells and validating wins the game', function () {
+		expect(2);
+
+		this.game.init(1, 1, 1);
+
+		this.game.bind('game:end', function (event) {
+			equal(event['outcome'], 'win');
+		});
+
+		this.game.flag(0, 0);
+
+		this.game.validate_flags();
+
+		equal(this.game.state, 'ended');
+	});
+
+	test('No flagged cells and validating loses the game', function () {
+		expect(2);
+
+		this.game.init(1, 1, 1);
+
+		this.game.bind('game:end', function (event) {
+			equal(event['outcome'], 'lose');
+		});
+
+		this.game.validate_flags();
+
+		equal(this.game.state, 'ended');
+	});
+
+	test('Incorrectly flagged cell loses the game', function () {
+		expect(2);
+
+		this.game.init(2, 1, 0);
+		this.game.mine(1, 0);
+
+		this.game.bind('game:end', function (event) {
+			equal(event['outcome'], 'lose');
+		});
+
+		this.game.flag(0, 0);
+
+		this.game.validate_flags();
+
+		equal(this.game.state, 'ended');
+	});
+
+	test('Flagging then unflagging cell loses the game', function () {
+		expect(2);
+
+		this.game.init(1, 1, 1);
+
+		this.game.bind('game:end', function (event) {
+			equal(event['outcome'], 'lose');
+		});
+
+		this.game.flag(0, 0);
+		this.game.flag(0, 0);
+
+		this.game.validate_flags();
+
+		equal(this.game.state, 'ended');
+	});
+
+	test('Not flagging all mines loses the game', function () {
+		expect(2);
+
+		this.game.init(1, 3, 0);
+
+		this.game.bind('game:end', function (event) {
+			equal(event['outcome'], 'lose');
+		});
+
+		this.game.mine(0, 1);
+		this.game.mine(0, 2);
+
+		this.game.flag(0, 1);
+
+		this.game.validate_flags();
+
+		equal(this.game.state, 'ended');
+	})
+
+	///////////////////////////
+	module('Utility functions', defaults);
+
+	test('Adjacent cells', function () {
+		this.game.init(3, 3, 0);
+
+		// top left
+		// o z x
+		// z z x
+		// x x x
+		deepEqual(this.game.adjacent_cells(0, 0), [[1, 0], [0, 1], [1, 1]]);
+
+		// center
+		// z z z
+		// z o z
+		// z z z
+		deepEqual(this.game.adjacent_cells(1, 1), [[0, 1], [0, 0], [1, 0], [0, 2], [2, 1], [1, 2], [2, 2], [2, 0]]);
+
+		// bottom right
+		// x x x
+		// x z z
+		// x z o
+		deepEqual(this.game.adjacent_cells(2, 2), [[1, 2], [1, 1], [2, 1]])
+	});
+
+	test('Adjacent cells single cell', function () {
+		this.game.init(1, 1, 0);
+
+		deepEqual(this.game.adjacent_cells(0, 0), []);
+	});
+
+	test('Export', function () {
+		this.game.init(4, 1, 0);
+		this.game.mine(2, 0);
+		this.game.mine(3, 0);
+
+		this.game.show(0, 0);
+		this.game.flag(1, 0);
+		this.game.flag(3, 0);
+
+		var expected = {
+			flagged: [[1, 0], [3, 0]],
+			height: 1,
+			shown: [[0, 0]],
+			mines: [[2, 0], [3, 0]],
+			width: 4
+		}
+
+		deepEqual(this.game.export(), expected)
+	});
+
+	test('Import', function () {
+		this.game.import({"width":4,"height":1,"shown":[[0,0]],"mines":[[2, 0], [3, 0]],"flagged":[[1, 0], [3, 0]]});
+
+		equal(this.game.width, 4);
+		equal(this.game.height, 1);
+
+		equal(this.game.cell(0, 0).visible, true);
+		equal(this.game.cell(2, 0).mine, true);
+		equal(this.game.cell(1, 0).flagged, true);
+	});
+
+})
+
+</script>
+
+<body>
+	<h1 id="qunit-header">Minesweeper tests</h1>
+	<h2 id="qunit-banner"></h2>
+	<h2 id="qunit-userAgent"></h2>
+	<ol id="qunit-tests">
+	</ol>
+
+	<div style="display: none;" id="table_anchor"></div>
+</body>
+</html>

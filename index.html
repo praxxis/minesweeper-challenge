@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+	<meta charset="utf-8">
+	<title>Minesweeper</title>
+
+	<link href="bootstrap/css/bootstrap.css" rel="stylesheet">
+	<script src="jquery-1.7.2.js"></script>
+	<script src="board.js"></script>
+	<script src="minesweeper.js"></script>
+	<script>
+	$(function () {
+		var board = new BoardController($('#board_container'), new Minesweeper());
+	})
+	</script>
+	<style>
+
+	#game_board_controls, #game_lose_message, #game_win_message {
+		display: none;
+	}
+
+	#game_board {
+		font: 24px monospace;
+	}
+
+	#game_board td {
+		text-align: center;
+		border: 1px solid #f2f2f2;
+		width: 35px;
+		height: 35px;
+	}
+
+	dl.instructions dt {
+		width: 50px;
+		font-family: monospace;
+		font-size: 150%;
+	}
+
+	dl.instructions dd {
+		margin-left: 65px
+	}
+
+	</style>
+</head>
+<body>
+<div class="container">
+	<div class="page-header">
+		<h1>Minesweeper! <small>But not as you know it...</small></h1>
+	</div>
+
+	<div class="row">
+		<div id="game_setup" class="span4">
+			<div class="well">
+				<h3>Instructions</h3>
+				<p>The symbols on the board represent different game cell states.</p>
+				<dl class="dl-horizontal instructions">
+					<dt>o</dt><dd><strong>Hidden</strong> A cell that has not yet been revealed.</dd>
+					<dt>f</dt><dd><strong>Flagged</strong> A cell that may or may not contain a mine.</dd>
+					<dt>x</dt><dd><strong>Mine</strong> A mine. If you see this, the game is over!</dd>
+				</dl>
+				<p>Revealing a cell will flag any adjacent mines. Hitting a mine will end the game. Flag all mines and press the "Validate" button to see if you've won.</p>
+			</div>
+			<div class="well">
+				<h3>Board controls</h3>
+				<form class="form-horizontal">
+					<fieldset>
+						<div class="control-group">
+							<label class="control-label" for="width">Width</label>
+							<div class="controls">
+								<input type="text" id="width" value="8" class="input-mini">
+							</div>
+						</div>
+
+						<div class="control-group">
+							<label class="control-label" for="height">Height</label>
+							<div class="controls">
+								<input type="text" id="height" value="8" class="input-mini">
+							</div>
+						</div>
+
+						<div class="control-group">
+							<label class="control-label" for="mines">Mines</label>
+							<div class="controls">
+								<input type="text" id="mines" value="10" class="input-mini">
+							</div>
+						</div>
+
+						<input type="submit" value="Start game" id="game_start" class="btn-large btn-primary">
+
+					</fieldset>
+				</form>
+			</div>
+			<div class="well">
+				<h3>Save game controls</h3>
+				<br>
+				<form>
+					<textarea id="game_save_output" class="span3" rows="3"></textarea>
+					<input type="submit" id="game_save" value="Save game" class="btn">
+				</form>
+				<hr>
+				<p>Paste a saved game in to the input and press "Load" to reload a game.</p>
+				<form class="form-inline">
+					<div class="input-append">
+						<input type="text" id="game_load_input" class="span2" placeholder="Saved game..."><button id="game_load" class="btn">Load</button>
+					</div>
+				</form>
+			</div>
+
+		</div>
+
+		<div id="board" class="span8">
+			<div class="alert alert-danger" id="game_lose_message"><strong>You lost!</strong> Game over man, game over!</div>
+			<div class="alert alert-success" id="game_win_message"><strong>You won!</strong> A winner is you!</div>
+			<div id="board_container"></div>
+			<div class="form-actions" id="game_board_controls">
+				<input type="submit" value="Validate" id="game_validate" class="btn-large btn-success">
+				<input type="submit" value="Cheat" id="game_cheat" class="btn-large btn-danger">
+			</div>
+		</div>
+	</div>
+</div>
+</body>
